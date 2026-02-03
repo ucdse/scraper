@@ -3,7 +3,7 @@ import datetime
 import time
 
 from config import RETRY_INTERVAL_SECONDS, SCRAPE_INTERVAL_SECONDS
-from database import Base, SessionLocal, engine
+from database import SessionLocal
 from fetch_stations import fetch_stations
 from models import Availability, Station
 
@@ -89,9 +89,8 @@ def scrape_stations():
     )
 
 
-# 主循环
+# 主循环（表结构由 flask-app 的迁移维护，请先执行 flask db upgrade）
 if __name__ == "__main__":
-    Base.metadata.create_all(bind=engine)
     while True:
         try:
             scrape_stations()

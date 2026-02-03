@@ -27,7 +27,17 @@ JCDECAUX_BASE_URL=https://api.jcdecaux.com/vls/v1/stations
 pip install -r requirements.txt
 ```
 
-## 3) 运行
+## 3) 与 flask-app 共用数据库时
+
+表结构由 **flask-app** 的迁移维护。使用同一 `DATABASE_URL` 时，请先在 flask-app 目录执行：
+
+```bash
+cd ../flask-app && flask --app app.py db upgrade
+```
+
+再启动本 scraper。
+
+## 4) 运行
 
 - 单次抓取并保存 JSON：
   ```bash
