@@ -40,10 +40,15 @@ cd ../flask-app && flask --app app.py db upgrade
 ## 4) 运行
 
 - 单次抓取并保存 JSON：
+
   ```bash
   python fetch_stations.py
   ```
+
 - 持续抓取并写入数据库：
+
   ```bash
   python main_scraper.py
   ```
+
+  update
