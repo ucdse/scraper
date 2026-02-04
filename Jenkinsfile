@@ -44,12 +44,12 @@ spec:
     }
 
     parameters {
-        string(name: 'IMAGE_NAME', defaultValue: 'kaiwenyao/dublin-scraper', description: 'Docker image name')
+        string(name: 'IMAGE_NAME', defaultValue: 'kaiwenyao/scraper', description: 'Docker image name')
         string(name: 'IMAGE_TAG', defaultValue: '', description: 'Image tag (empty means BUILD_NUMBER)')
         booleanParam(name: 'PUSH_IMAGE', defaultValue: true, description: 'Push image to registry')
         booleanParam(name: 'DEPLOY_TO_EC2', defaultValue: false, description: 'Deploy container to EC2')
-        string(name: 'CONTAINER_NAME', defaultValue: 'dublin-scraper', description: 'Container name on EC2')
-        string(name: 'CONTAINER_ENV_FILE', defaultValue: '/opt/dublin-scraper/.env', description: 'Env file path on EC2')
+        string(name: 'CONTAINER_NAME', defaultValue: 'scraper', description: 'Container name on EC2')
+        string(name: 'CONTAINER_ENV_FILE', defaultValue: '/opt/scraper/.env', description: 'Env file path on EC2')
         string(name: 'EC2_SSH_KEY_CREDENTIALS_ID', defaultValue: 'server-ssh-key', description: 'Jenkins SSH key credential ID')
     }
 
