@@ -40,5 +40,7 @@ class Availability(Base):
     status: Mapped[str] = mapped_column(String(20))
     last_update: Mapped[int] = mapped_column(BigInteger)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # 数据请求的时间（抓取该条记录时的时间）
+    requested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="数据请求的时间")
 
     station: Mapped[Station] = relationship("Station", back_populates="availabilities")

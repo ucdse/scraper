@@ -70,6 +70,7 @@ def scrape_stations():
                 status=item["status"],
                 last_update=item["last_update"],
                 timestamp=dt_object,
+                requested_at=datetime.datetime.now(datetime.timezone.utc),
             )
             session.add(availability)
 
