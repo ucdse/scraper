@@ -17,8 +17,10 @@ class Station(Base):
     address: Mapped[str] = mapped_column(String(200))
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
-    banking: Mapped[bool] = mapped_column(Boolean)
-    bonus: Mapped[bool] = mapped_column(Boolean)
+    # 是否支持现场银行卡/信用卡支付 (JCDecaux API: banking)。0=不支持，1=支持
+    banking: Mapped[bool] = mapped_column(Boolean, comment="是否支持现场银行卡/信用卡支付；0=不支持，1=支持")
+    # 是否为奖励站点，如还车可获额外时长等 (JCDecaux API: bonus)。0=否，1=是
+    bonus: Mapped[bool] = mapped_column(Boolean, comment="是否为奖励站点（还车可获额外时长等）；0=否，1=是")
     bike_stands: Mapped[int] = mapped_column(Integer)
 
     availabilities: Mapped[list[Availability]] = relationship(
