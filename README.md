@@ -4,26 +4,7 @@
 
 **与 flask-app 共用同一套数据库表结构**：表 `station`、`availability` 由 flask-app 的迁移维护，scraper 只负责写入数据，不维护表结构。
 
-## 1) 准备环境变量
-
-在仓库根目录放置 `.env`，至少包含：
-
-```env
-DATABASE_URL=mysql+pymysql://user:password@host:3306/dublinbikes
-JCDECAUX_API_KEY=your_api_key
-JCDECAUX_CONTRACT=dublin
-```
-
-可选：
-
-```env
-SCRAPE_INTERVAL_SECONDS=300
-RETRY_INTERVAL_SECONDS=60
-OUTPUT_JSON=stations.json
-JCDECAUX_BASE_URL=https://api.jcdecaux.com/vls/v1/stations
-```
-
-## 2) 数据库与迁移
+## 1) 数据库与迁移
 
 表结构由 **flask-app** 的迁移维护。首次使用或迁移变更后，请在 flask-app 目录执行：
 
@@ -33,18 +14,61 @@ cd ../flask-app && flask --app app.py db upgrade
 
 完成后再启动 scraper（任选下面一种方式）。
 
-## 3) 运行方式（二选一）
+## 2) 运行方式（二选一）
 
 ### 方式 A：本地运行
 
-安装依赖：
+#### 步骤 1：克隆仓库
+
+```bash
+git clone https://github.com/your-org/scraper.git
+cd scraper
+```
+
+#### 步骤 2：创建并激活虚拟环境（推荐）
+
+```bash
+# 创建 Conda 环境
+conda create -n scraper python=3.11 -y
+
+# 激活环境
+conda activate scraper
+```
+
+#### 步骤 3：安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-- 单次抓取并保存 JSON：`python fetch_stations.py`
-- 持续抓取并写入数据库：`python main_scraper.py`
+#### 步骤 4：配置环境变量
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，填入实际配置：
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | ✅ | 数据库连接字符串，如 `mysql+pymysql://user:password@host:3306/dublinbikes` |
+| `JCDECAUX_API_KEY` | ✅ | JCDecaux API 密钥 |
+| `JCDECAUX_CONTRACT` | ✅ | 合约名称，如 `dublin` |
+| `SCRAPE_INTERVAL_SECONDS` | | 抓取间隔（默认 300） |
+| `RETRY_INTERVAL_SECONDS` | | 失败重试间隔（默认 60） |
+
+#### 步骤 5：确保数据库已就绪
+
+运行前请确认：
+- 数据库服务已启动且可连接
+- flask-app 的迁移已执行（参考「1) 数据库与迁移」章节）
+
+#### 步骤 6：运行脚本
+
+| 命令 | 说明 |
+|------|------|
+| `python fetch_stations.py` | 单次抓取，结果保存到 JSON 文件 |
+| `python main_scraper.py` | 持续抓取，定时写入数据库 |
 
 ### 方式 B：Docker 部署
 
@@ -54,7 +78,7 @@ pip install -r requirements.txt
 docker build -t kaiwenyao/scraper:latest .
 ```
 
-运行容器时通过 `--env-file` 传入环境变量（内容同「准备环境变量」）。若与 flask-app 在同一 Docker 网络中，可加入该网络以便共用数据库：
+运行容器时通过 `--env-file` 传入环境变量（参考 `.env.example`）。若与 flask-app 在同一 Docker 网络中，可加入该网络以便共用数据库：
 
 ```bash
 # 创建网络（若尚未创建）
