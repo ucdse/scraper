@@ -2,9 +2,10 @@
 import datetime
 import time
 
-from config import RETRY_INTERVAL_SECONDS, SCRAPE_INTERVAL_SECONDS
+from config import RETRY_INTERVAL_SECONDS, SCRAPE_INTERVAL_SECONDS, WEATHER_SCRAPE_INTERVAL_SECONDS
 from database import SessionLocal
 from fetch_stations import fetch_stations
+from fetch_weather import fetch_weather_and_store
 from models import Availability, Station
 
 
@@ -90,8 +91,27 @@ def scrape_stations():
     )
 
 
+import threading
+
+def weather_worker():
+    """
+    独立线程运行天气抓取，按照固定的频率 (1小时)
+    """
+    while True:
+        try:
+            fetch_weather_and_store()
+            time.sleep(WEATHER_SCRAPE_INTERVAL_SECONDS)
+        except Exception as e:
+            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{ts}] 天气线程报错了: {e}")
+            time.sleep(RETRY_INTERVAL_SECONDS)
+
 # 主循环（表结构由 flask-app 的迁移维护，请先执行 flask db upgrade）
 if __name__ == "__main__":
+    # 启动天气抓取线程
+    t_weather = threading.Thread(target=weather_worker, daemon=True)
+    t_weather.start()
+
     while True:
         try:
             scrape_stations()
@@ -99,5 +119,5 @@ if __name__ == "__main__":
             time.sleep(SCRAPE_INTERVAL_SECONDS)
         except Exception as e:
             ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[{ts}] 报错了: {e}")
+            print(f"[{ts}] 站点报错了: {e}")
             time.sleep(RETRY_INTERVAL_SECONDS)
