@@ -23,3 +23,17 @@ if not DATABASE_URL:
 
 SCRAPE_INTERVAL_SECONDS = int(os.environ.get("SCRAPE_INTERVAL_SECONDS", "300"))
 RETRY_INTERVAL_SECONDS = int(os.environ.get("RETRY_INTERVAL_SECONDS", "60"))
+
+OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY")
+
+# For Geocoding API: target city
+WEATHER_CITY = os.environ.get("WEATHER_CITY", "Dublin,IE")
+
+# OpenWeather API URLs
+OPENWEATHER_GEOCODING_URL = os.environ.get("OPENWEATHER_GEOCODING_URL", "http://api.openweathermap.org/geo/1.0/direct")
+OPENWEATHER_ONECALL_URL = os.environ.get("OPENWEATHER_ONECALL_URL", "https://api.openweathermap.org/data/3.0/onecall")
+OPENWEATHER_FORECAST_URL = os.environ.get("OPENWEATHER_FORECAST_URL", "https://api.openweathermap.org/data/2.5/forecast")
+
+# For Weather: polling interval is usually once per hour (3600 seconds)
+# We store this independently from the station polling interval.
+WEATHER_SCRAPE_INTERVAL_SECONDS = int(os.environ.get("WEATHER_SCRAPE_INTERVAL_SECONDS", "3600"))
