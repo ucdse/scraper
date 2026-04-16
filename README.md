@@ -9,7 +9,7 @@
 表结构由 **flask-app** 的迁移维护。首次使用或迁移变更后，请在 flask-app 目录执行：
 
 ```bash
-cd ../flask-app && flask --app app.py db upgrade
+cd ../flask-app && flask --app app:create_app db upgrade
 ```
 
 完成后再启动 scraper（任选下面一种方式）。
