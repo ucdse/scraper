@@ -1,100 +1,306 @@
-# scraper
+# 🚀 Dublin Bikes Scraper
 
-独立运行的 Dublin Bikes 抓取程序（不依赖 Flask 应用进程即可运行）。
+**Dublin Bikes Scraper** is a ✨ standalone data collection service ✨ designed to continuously scrape Dublin's shared bike station availability and local weather forecasts, then persist them to a MySQL database. Whether you're building a real-time dashboard, training a demand-forecasting model, or just love open data — this scraper has you covered! 🎉
 
-**与 flask-app 共用同一套数据库表结构**：表 `station`、`availability` 由 flask-app 的迁移维护，scraper 只负责写入数据，不维护表结构。
+> **Shared Database**: Table schemas (`station`, `availability`, `weather_forecast`) are maintained by the companion [flask-app](https://github.com/ucdse/flask-app). This scraper only writes data — it does **not** own or run migrations.
 
-## 1) 数据库与迁移
+---
 
-表结构由 **flask-app** 的迁移维护。首次使用或迁移变更后，请在 flask-app 目录执行：
+## 📋 Table of Contents
+- [✨ Features](#-features)
+- [🏗️ Architecture](#-architecture)
+- [🚀 Getting Started](#-getting-started)
+  - [🔧 Prerequisites](#-prerequisites)
+  - [🗄️ Database and Migrations](#-database-and-migrations)
+  - [⚙️ Installation (Local)](#-installation-local)
+  - [🐳 Installation (Docker)](#-installation-docker)
+  - [🔧 Configuration](#-configuration)
+- [🧬 Testing](#-testing)
+- [💻 Usage](#-usage)
+- [📁 Project Structure](#-project-structure)
+- [🔄 CI/CD](#-cicd)
+- [🤝 Contributing](#-contributing)
+- [📝 License](#-license)
+- [📧 Contact](#-contact)
+
+---
+
+## ✨ Features
+- **🚲 Bike Station Scraping**: Fetches real-time station data (availability, status, location) from the JCDecaux API every 5 minutes. 🌟
+- **🌤️ Weather Forecast Scraping**: Collects hourly weather forecasts (temperature, humidity, wind, UV index, etc.) from OpenWeatherMap every hour.
+- **🔄 Dual-Thread Architecture**: Station and weather scraping run concurrently in separate threads with independent intervals and retry logic. 🔥
+- **🐳 Docker-First Deployment**: Ships with a production-ready `Dockerfile` (Python 3.12-slim, non-root user). 🐳
+- **⚡ Auto-Retry on Failure**: The station scraper catches errors and retries after `RETRY_INTERVAL_SECONDS` (default 60s). The weather scraper handles transient API errors internally and retries on the next scheduled cycle. ⚡
+- **🧹 Smart Data Cleanup**: Weather scraper automatically purges expired forecasts, keeping only the next 48 hours. 🧹
+- **🗄️ Smart Inserts**: Station records are inserted on first encounter; availability data is updated each cycle. Weather forecasts are upserted to avoid duplicates. 🗄️
+
+---
+
+## 🏗️ Architecture
+
+```
+┌──────────────────────────────────────────────────┐
+│                 main_scraper.py                   │
+│  ┌─────────────────────┐ ┌─────────────────────┐ │
+│  │  Station Thread     │ │  Weather Thread      │ │
+│  │  (every 5 min)      │ │  (every 1 hour)      │ │
+│  │  ┌───────────────┐  │ │  ┌───────────────┐  │ │
+│  │  │ JCDecaux API  │  │ │  │ OpenWeatherMap │  │ │
+│  │  └───────┬───────┘  │ │  └───────┬───────┘  │ │
+│  │          │           │ │          │           │ │
+│  │          ▼           │ │          ▼           │ │
+│  │  ┌───────────────┐  │ │  ┌───────────────┐  │ │
+│  │  │  MySQL DB     │  │ │  │  MySQL DB      │  │ │
+│  │  │ (station,     │  │ │  │ (weather_     │  │ │
+│  │  │  availability)│  │ │  │  forecast)    │  │ │
+│  │  └───────────────┘  │ │  └───────────────┘  │ │
+│  └─────────────────────┘ └─────────────────────┘ │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Getting Started
+
+### 🔧 Prerequisites
+- **Python 3.11+** (or Docker)
+- **MySQL** database accessible and migrated (see [Database and Migrations](#-database-and-migrations))
+- **JCDecaux API Key** — [Request here](https://developer.jcdecaux.com/)
+- **OpenWeatherMap API Key** — [Sign up here](https://openweathermap.org/api) (optional, for weather scraping)
+
+### 🗄️ Database and Migrations
+
+Table schemas are maintained by the **flask-app**. Before running the scraper for the first time (or after any migration change), run migrations in the flask-app directory:
 
 ```bash
 cd ../flask-app && flask --app app:create_app db upgrade
 ```
 
-完成后再启动 scraper（任选下面一种方式）。
+Once the database is ready, choose one of the two installation methods below.
 
-## 2) 运行方式（二选一）
+### ⚙️ Installation (Local)
 
-### 方式 A：本地运行
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/ucdse/scraper.git
+   cd scraper
+   ```
 
-#### 步骤 1：克隆仓库
+2. **Create and activate a virtual environment (recommended):**
+   ```bash
+   # Create Conda environment
+   conda create -n scraper python=3.11 -y
 
-```bash
-git clone https://github.com/your-org/scraper.git
-cd scraper
+   # Activate environment
+   conda activate scraper
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` — see [Configuration](#-configuration) below for details.
+
+5. **Ensure the database is ready:**
+   - MySQL service is running and accessible
+   - flask-app migrations have been applied (see [Database and Migrations](#-database-and-migrations))
+
+6. **Run the scraper:**
+
+   | Command | Description |
+   |---------|-------------|
+   | `python fetch_stations.py` | One-off fetch — saves station data to a JSON file |
+   | `python main_scraper.py` | Continuous scraping — polls APIs and writes to database |
+
+### 🐳 Installation (Docker)
+
+1. **Build the image:**
+   ```bash
+   docker build -t kaiwenyao/scraper:latest .
+   ```
+
+2. **Create a Docker network** (if sharing a database with flask-app):
+   ```bash
+   docker network create flask-app
+   ```
+
+3. **Run the container:**
+   ```bash
+   docker run -d \
+     --name scraper \
+     --restart unless-stopped \
+     --network flask-app \
+     --env-file /path/to/.env \
+     kaiwenyao/scraper:latest
+   ```
+
+   | Flag | Purpose |
+   |------|---------|
+   | `--restart unless-stopped` | Auto-restart on host reboot |
+   | `--network flask-app` | Share network with flask-app for database access |
+   | `--env-file` | Pass environment variables from a `.env` file |
+
+   The container defaults to `python main_scraper.py` (continuous scraping + database writes).
+
+---
+
+### 🔧 Configuration
+
+All settings are managed via environment variables (loaded from `.env` via `python-dotenv`). Copy `.env.example` as a starting point:
+
+```env
+DATABASE_URL=mysql+pymysql://user:password@127.0.0.1:3306/dublinbikes
+JCDECAUX_API_KEY=your_jcdecaux_api_key
+JCDECAUX_CONTRACT=dublin
+SCRAPE_INTERVAL_SECONDS=300
+RETRY_INTERVAL_SECONDS=60
+WEATHER_SCRAPE_INTERVAL_SECONDS=3600
+OUTPUT_JSON=stations.json
+JCDECAUX_BASE_URL=https://api.jcdecaux.com/vls/v1/stations
+OPENWEATHER_API_KEY=your_openweather_api_key
+OPENWEATHER_GEOCODING_URL=http://api.openweathermap.org/geo/1.0/direct
+OPENWEATHER_ONECALL_URL=https://api.openweathermap.org/data/3.0/onecall
+OPENWEATHER_FORECAST_URL=https://api.openweathermap.org/data/2.5/forecast
+WEATHER_CITY=Dublin,IE
 ```
 
-#### 步骤 2：创建并激活虚拟环境（推荐）
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | ✅ | — | MySQL connection string, e.g. `mysql+pymysql://user:password@host:3306/dublinbikes` |
+| `JCDECAUX_API_KEY` | ✅ | — | JCDecaux API key for bike station data |
+| `JCDECAUX_CONTRACT` | ✅ | `dublin` | JCDecaux contract name |
+| `OPENWEATHER_API_KEY` | | — | OpenWeatherMap API key (optional — weather scraping is skipped if unset) |
+| `SCRAPE_INTERVAL_SECONDS` | | `300` | Interval between bike station scrapes (seconds) |
+| `RETRY_INTERVAL_SECONDS` | | `60` | Wait time before retrying after a failure (seconds) |
+| `WEATHER_SCRAPE_INTERVAL_SECONDS` | | `3600` | Interval between weather scrapes (seconds) |
+| `WEATHER_CITY` | | `Dublin,IE` | Target city for weather forecasts |
+| `OUTPUT_JSON` | | `stations.json` | Output file for `fetch_stations.py` |
 
+---
+
+## 🧬 Testing
+
+This project does not currently include an automated test suite. The scraper is designed as a long-running data collection service and is primarily validated through manual integration testing against live APIs and the MySQL database.
+
+If you'd like to contribute tests, check out [Contributing](#-contributing) below — we'd love to have them! 🙌
+
+---
+
+## 💻 Usage
+
+### One-off Station Fetch (JSON output)
 ```bash
-# 创建 Conda 环境
-conda create -n scraper python=3.11 -y
-
-# 激活环境
-conda activate scraper
+python fetch_stations.py
+# Output: stations.json with all station data
 ```
 
-#### 步骤 3：安装依赖
-
+### Continuous Scraping (Database writes)
 ```bash
-pip install -r requirements.txt
+python main_scraper.py
+# Log output example:
+# [2026-04-19 10:00:00] Scraping stations...
+# [2026-04-19 10:00:02] Done | Fetched 110 station records, 0 new stations, 110 availability records written | Elapsed: 1.85s
+# [2026-04-19 10:00:00] Scraping weather (Dublin,IE)...
+# [2026-04-19 10:00:03] Weather done | Insert: 48, Update: 0 | Elapsed: 2.30s
 ```
 
-#### 步骤 4：配置环境变量
+Two concurrent threads run inside `main_scraper.py`:
+- **Station thread**: Polls JCDecaux API every `SCRAPE_INTERVAL_SECONDS` (default 5 min)
+- **Weather thread**: Polls OpenWeatherMap every `WEATHER_SCRAPE_INTERVAL_SECONDS` (default 1 hour)
 
-```bash
-cp .env.example .env
+Both threads recover automatically from errors. The station thread retries after `RETRY_INTERVAL_SECONDS` (default 60s). The weather thread handles API errors internally and retries on the next hourly cycle.
+
+---
+
+## 📁 Project Structure
+```
+scraper/
+├── main_scraper.py       # Entry point — runs both scrapers in concurrent threads
+├── fetch_stations.py     # JCDecaux API client — fetches & saves station JSON
+├── fetch_weather.py      # OpenWeatherMap client — fetches & upserts weather forecasts
+├── config.py             # Environment-based configuration (no Flask dependency)
+├── database.py           # SQLAlchemy engine & session factory
+├── models.py             # ORM models: Station, Availability
+├── models_weather.py     # ORM model: WeatherForecast
+├── requirements.txt     # Python dependencies
+├── Dockerfile            # Production-ready container (Python 3.12-slim, non-root)
+├── Jenkinsfile           # CI/CD pipeline — build, push, deploy to EC2
+├── .env.example          # Template for environment variables
+├── .gitignore
+└── .dockerignore
 ```
 
-编辑 `.env` 文件，填入实际配置：
+### Key Dependencies
 
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `DATABASE_URL` | ✅ | 数据库连接字符串，如 `mysql+pymysql://user:password@host:3306/dublinbikes` |
-| `JCDECAUX_API_KEY` | ✅ | JCDecaux API 密钥 |
-| `JCDECAUX_CONTRACT` | ✅ | 合约名称，如 `dublin` |
-| `SCRAPE_INTERVAL_SECONDS` | | 抓取间隔（默认 300） |
-| `RETRY_INTERVAL_SECONDS` | | 失败重试间隔（默认 60） |
+| Package | Purpose |
+|---------|---------|
+| [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 | ORM & database session management |
+| [PyMySQL](https://github.com/PyMySQL/PyMySQL) | MySQL driver for SQLAlchemy |
+| [requests](https://docs.python-requests.org/) | HTTP client for OpenWeatherMap API |
+| [python-dotenv](https://github.com/theskumar/python-dotenv) | Load `.env` variables into `os.environ` |
+| [cryptography](https://cryptography.io/) | Secure connection support for PyMySQL |
 
-#### 步骤 5：确保数据库已就绪
+---
 
-运行前请确认：
-- 数据库服务已启动且可连接
-- flask-app 的迁移已执行（参考「1) 数据库与迁移」章节）
+## 🔄 CI/CD
 
-#### 步骤 6：运行脚本
+The `Jenkinsfile` defines a 4-stage pipeline:
 
-| 命令 | 说明 |
-|------|------|
-| `python fetch_stations.py` | 单次抓取，结果保存到 JSON 文件 |
-| `python main_scraper.py` | 持续抓取，定时写入数据库 |
+| Stage | Description |
+|-------|-------------|
+| **1. Pull Code** | Checkout from SCM |
+| **2. Python Syntax Check** | Compile all `.py` files to verify syntax |
+| **3. Build & Push Docker Image** | Build image → push to Docker Hub |
+| **4. Deploy to EC2** | On `main` branch only — pull image, restart container on EC2 |
 
-### 方式 B：Docker 部署
+Deployment uses the same image name, container name, and `.env` path as defined in Jenkins parameters.
 
-在 `scraper` 目录下构建镜像：
+---
 
-```bash
-docker build -t kaiwenyao/scraper:latest .
-```
+## 🤝 Contributing
 
-运行容器时通过 `--env-file` 传入环境变量（参考 `.env.example`）。若与 flask-app 在同一 Docker 网络中，可加入该网络以便共用数据库：
+We welcome contributions! 🎉 If you'd like to contribute, please follow these steps:
 
-```bash
-# 创建网络（若尚未创建）
-docker network create flask-app
+1. **Fork** the repository.
 
-# 运行 scraper 容器
-docker run -d \
-  --name scraper \
-  --restart unless-stopped \
-  --network flask-app \
-  --env-file /path/to/.env \
-  kaiwenyao/scraper:latest
-```
+2. **Create a new branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-- `--restart unless-stopped`：宿主机重启后自动拉起容器。
-- `--network flask-app`：与 flask-app 同网段时使用，便于 `DATABASE_URL` 指向同一数据库（如用服务名/容器名作 host）。
-- 镜像默认执行 `python main_scraper.py`（持续抓取并写入数据库）。
+3. **Commit your changes:**
+   ```bash
+   git commit -m "Add your awesome feature"
+   ```
 
-CI 流程见 `scraper/Jenkinsfile`：构建镜像、推送到 registry，main 分支时部署到 EC2（使用相同镜像名、容器名与 env 路径）。
+4. **Push to the branch:**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+5. **Open a pull request.** 🚀
+
+---
+
+## 📝 License
+
+This project does not currently have an open-source license. All rights are reserved by the repository owners.
+
+---
+
+## 📧 Contact
+
+If you have any questions or feedback, feel free to reach out:
+
+- **Email**: [Open a GitHub issue](https://github.com/ucdse/scraper/issues/new) for now — project email coming soon
+- **GitHub Issues**: [Open an Issue](https://github.com/ucdse/scraper/issues) 🐛
+- **Organization**: [UCD Software Engineering](https://github.com/ucdse)
+
+---
+
+Made with ❤️ by the [UCD Software Engineering](https://github.com/ucdse) team. Happy scraping! 🎉
