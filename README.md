@@ -8,11 +8,11 @@
 
 ## 📋 Table of Contents
 - [✨ Features](#-features)
-- [🏗️ Architecture](#️-architecture)
+- [🏗️ Architecture](#-architecture)
 - [🚀 Getting Started](#-getting-started)
   - [🔧 Prerequisites](#-prerequisites)
-  - [🗄️ Database and Migrations](#️-database-and-migrations)
-  - [⚙️ Installation (Local)](#️-installation-local)
+  - [🗄️ Database and Migrations](#-database-and-migrations)
+  - [⚙️ Installation (Local)](#-installation-local)
   - [🐳 Installation (Docker)](#-installation-docker)
   - [🔧 Configuration](#-configuration)
 - [🧬 Testing](#-testing)
@@ -64,7 +64,7 @@
 
 ### 🔧 Prerequisites
 - **Python 3.11+** (or Docker)
-- **MySQL** database accessible and migrated (see [Database and Migrations](#️-database-and-migrations))
+- **MySQL** database accessible and migrated (see [Database and Migrations](#-database-and-migrations))
 - **JCDecaux API Key** — [Request here](https://developer.jcdecaux.com/)
 - **OpenWeatherMap API Key** — [Sign up here](https://openweathermap.org/api) (optional, for weather scraping)
 
@@ -108,7 +108,7 @@ Once the database is ready, choose one of the two installation methods below.
 
 5. **Ensure the database is ready:**
    - MySQL service is running and accessible
-   - flask-app migrations have been applied (see [Database and Migrations](#️-database-and-migrations))
+   - flask-app migrations have been applied (see [Database and Migrations](#-database-and-migrations))
 
 6. **Run the scraper:**
 
@@ -149,7 +149,7 @@ Once the database is ready, choose one of the two installation methods below.
 
 ---
 
-## 🔧 Configuration
+### 🔧 Configuration
 
 All settings are managed via environment variables (loaded from `.env` via `python-dotenv`). Copy `.env.example` as a starting point:
 
