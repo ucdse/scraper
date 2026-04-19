@@ -216,3 +216,91 @@ Two concurrent threads run inside `main_scraper.py`:
 Both threads recover automatically from errors, retrying after `RETRY_INTERVAL_SECONDS`.
 
 ---
+
+## 📁 Project Structure
+```
+scraper/
+├── main_scraper.py       # Entry point — runs both scrapers in concurrent threads
+├── fetch_stations.py     # JCDecaux API client — fetches & saves station JSON
+├── fetch_weather.py      # OpenWeatherMap client — fetches & upserts weather forecasts
+├── config.py             # Environment-based configuration (no Flask dependency)
+├── database.py           # SQLAlchemy engine & session factory
+├── models.py             # ORM models: Station, Availability
+├── models_weather.py     # ORM model: WeatherForecast
+├── requirements.txt     # Python dependencies
+├── Dockerfile            # Production-ready container (Python 3.12-slim, non-root)
+├── Jenkinsfile           # CI/CD pipeline — build, push, deploy to EC2
+├── .env.example          # Template for environment variables
+├── .gitignore
+└── .dockerignore
+```
+
+### Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 | ORM & database session management |
+| [PyMySQL](https://github.com/PyMySQL/PyMySQL) | MySQL driver for SQLAlchemy |
+| [requests](https://docs.python-requests.org/) | HTTP client for OpenWeatherMap API |
+| [python-dotenv](https://github.com/theskumar/python-dotenv) | Load `.env` variables into `os.environ` |
+| [cryptography](https://cryptography.io/) | Secure connection support for PyMySQL |
+
+---
+
+## 🔄 CI/CD
+
+The `Jenkinsfile` defines a 4-stage pipeline:
+
+| Stage | Description |
+|-------|-------------|
+| **1. Pull Code** | Checkout from SCM |
+| **2. Python Syntax Check** | Compile all `.py` files to verify syntax |
+| **3. Build & Push Docker Image** | Build image → push to Docker Hub |
+| **4. Deploy to EC2** | On `main` branch only — pull image, restart container on EC2 |
+
+Deployment uses the same image name, container name, and `.env` path as defined in Jenkins parameters.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! 🎉 If you'd like to contribute, please follow these steps:
+
+1. **Fork** the repository.
+
+2. **Create a new branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+3. **Commit your changes:**
+   ```bash
+   git commit -m "Add your awesome feature"
+   ```
+
+4. **Push to the branch:**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+5. **Open a pull request.** 🚀
+
+---
+
+## 📝 License
+
+This project does not currently have an open-source license. All rights are reserved by the repository owners.
+
+---
+
+## 📧 Contact
+
+If you have any questions or feedback, feel free to reach out:
+
+- **Email**: [Open a GitHub issue](https://github.com/ucdse/scraper/issues/new) for now — project email coming soon
+- **GitHub Issues**: [Open an Issue](https://github.com/ucdse/scraper/issues) 🐛
+- **Organization**: [UCD Software Engineering](https://github.com/ucdse)
+
+---
+
+Made with ❤️ by the [UCD Software Engineering](https://github.com/ucdse) team. Happy scraping! 🎉
