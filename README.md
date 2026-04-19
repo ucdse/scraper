@@ -24,3 +24,38 @@
 - [📧 Contact](#-contact)
 
 ---
+
+## ✨ Features
+- **🚲 Bike Station Scraping**: Fetches real-time station data (availability, status, location) from the JCDecaux API every 5 minutes. 🌟
+- **🌤️ Weather Forecast Scraping**: Collects hourly weather forecasts (temperature, humidity, wind, UV index, etc.) from OpenWeatherMap every hour.
+- **🔄 Dual-Thread Architecture**: Station and weather scraping run concurrently in separate threads with independent intervals and retry logic. 🔥
+- **🐳 Docker-First Deployment**: Ships with a production-ready `Dockerfile` (Python 3.12-slim, non-root user). 🐳
+- **⚡ Auto-Retry on Failure**: Both scrapers catch errors and retry after a configurable interval — no manual intervention needed. ⚡
+- **🧹 Smart Data Cleanup**: Weather scraper automatically purges expired forecasts, keeping only the next 48 hours. 🧹
+- **🗄️ Upsert Logic**: Station data is inserted or updated intelligently; weather forecasts are upserted to avoid duplicates. 🗄️
+
+---
+
+## 🏗️ Architecture
+
+```
+┌──────────────────────────────────────────────────┐
+│                 main_scraper.py                   │
+│  ┌─────────────────────┐ ┌─────────────────────┐ │
+│  │  Station Thread     │ │  Weather Thread      │ │
+│  │  (every 5 min)      │ │  (every 1 hour)      │ │
+│  │  ┌───────────────┐  │ │  ┌───────────────┐  │ │
+│  │  │ JCDecaux API  │  │ │  │ OpenWeatherMap │  │ │
+│  │  └───────┬───────┘  │ │  └───────┬───────┘  │ │
+│  │          │           │ │          │           │ │
+│  │          ▼           │ │          ▼           │ │
+│  │  ┌───────────────┐  │ │  ┌───────────────┐  │ │
+│  │  │  MySQL DB     │  │ │  │  MySQL DB      │  │ │
+│  │  │ (station,     │  │ │  │ (weather_     │  │ │
+│  │  │  availability)│  │ │  │  forecast)    │  │ │
+│  │  └───────────────┘  │ │  └───────────────┘  │ │
+│  └─────────────────────┘ └─────────────────────┘ │
+└──────────────────────────────────────────────────┘
+```
+
+---
