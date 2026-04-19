@@ -182,3 +182,37 @@ WEATHER_CITY=Dublin,IE
 | `OUTPUT_JSON` | | `stations.json` | Output file for `fetch_stations.py` |
 
 ---
+
+## 🧬 Testing
+
+This project does not currently include an automated test suite. The scraper is designed as a long-running data collection service and is primarily validated through manual integration testing against live APIs and the MySQL database.
+
+If you'd like to contribute tests, check out [Contributing](#-contributing) below — we'd love to have them! 🙌
+
+---
+
+## 💻 Usage
+
+### One-off Station Fetch (JSON output)
+```bash
+python fetch_stations.py
+# Output: stations.json with all station data
+```
+
+### Continuous Scraping (Database writes)
+```bash
+python main_scraper.py
+# Log output example:
+# [2026-04-19 10:00:00] Scraping stations...
+# [2026-04-19 10:00:02] Done | Fetched 110 station records, 0 new stations, 110 availability records written | Elapsed: 1.85s
+# [2026-04-19 10:00:00] Scraping weather (Dublin,IE)...
+# [2026-04-19 10:00:03] Weather done | Insert: 48, Update: 0 | Elapsed: 2.30s
+```
+
+Two concurrent threads run inside `main_scraper.py`:
+- **Station thread**: Polls JCDecaux API every `SCRAPE_INTERVAL_SECONDS` (default 5 min)
+- **Weather thread**: Polls OpenWeatherMap every `WEATHER_SCRAPE_INTERVAL_SECONDS` (default 1 hour)
+
+Both threads recover automatically from errors, retrying after `RETRY_INTERVAL_SECONDS`.
+
+---
