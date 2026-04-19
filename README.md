@@ -1,5 +1,7 @@
 # 🚀 Dublin Bikes Scraper
 
+> [🇨🇳 中文版](README_CN.md)
+
 **Dublin Bikes Scraper** is a ✨ standalone data collection service ✨ designed to continuously scrape Dublin's shared bike station availability and local weather forecasts, then persist them to a MySQL database. Whether you're building a real-time dashboard, training a demand-forecasting model, or just love open data — this scraper has you covered! 🎉
 
 > **Shared Database**: Table schemas (`station`, `availability`, `weather_forecast`) are maintained by the companion [flask-app](https://github.com/ucdse/flask-app). This scraper only writes data — it does **not** own or run migrations.
