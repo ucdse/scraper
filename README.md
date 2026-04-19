@@ -59,3 +59,126 @@
 ```
 
 ---
+
+## 🚀 Getting Started
+
+### 🔧 Prerequisites
+- **Python 3.11+** (or Docker)
+- **MySQL** database accessible and migrated (see [Database and Migrations](#️-database-and-migrations))
+- **JCDecaux API Key** — [Request here](https://developer.jcdecaux.com/)
+- **OpenWeatherMap API Key** — [Sign up here](https://openweathermap.org/api) (optional, for weather scraping)
+
+### 🗄️ Database and Migrations
+
+Table schemas are maintained by the **flask-app**. Before running the scraper for the first time (or after any migration change), run migrations in the flask-app directory:
+
+```bash
+cd ../flask-app && flask --app app:create_app db upgrade
+```
+
+Once the database is ready, choose one of the two installation methods below.
+
+### ⚙️ Installation (Local)
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/ucdse/scraper.git
+   cd scraper
+   ```
+
+2. **Create and activate a virtual environment (recommended):**
+   ```bash
+   # Create Conda environment
+   conda create -n scraper python=3.11 -y
+
+   # Activate environment
+   conda activate scraper
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` — see [Configuration](#-configuration) below for details.
+
+5. **Ensure the database is ready:**
+   - MySQL service is running and accessible
+   - flask-app migrations have been applied (see [Database and Migrations](#️-database-and-migrations))
+
+6. **Run the scraper:**
+
+   | Command | Description |
+   |---------|-------------|
+   | `python fetch_stations.py` | One-off fetch — saves station data to a JSON file |
+   | `python main_scraper.py` | Continuous scraping — polls APIs and writes to database |
+
+### 🐳 Installation (Docker)
+
+1. **Build the image:**
+   ```bash
+   docker build -t kaiwenyao/scraper:latest .
+   ```
+
+2. **Create a Docker network** (if sharing a database with flask-app):
+   ```bash
+   docker network create flask-app
+   ```
+
+3. **Run the container:**
+   ```bash
+   docker run -d \
+     --name scraper \
+     --restart unless-stopped \
+     --network flask-app \
+     --env-file /path/to/.env \
+     kaiwenyao/scraper:latest
+   ```
+
+   | Flag | Purpose |
+   |------|---------|
+   | `--restart unless-stopped` | Auto-restart on host reboot |
+   | `--network flask-app` | Share network with flask-app for database access |
+   | `--env-file` | Pass environment variables from a `.env` file |
+
+   The container defaults to `python main_scraper.py` (continuous scraping + database writes).
+
+---
+
+## 🔧 Configuration
+
+All settings are managed via environment variables (loaded from `.env` via `python-dotenv`). Copy `.env.example` as a starting point:
+
+```env
+DATABASE_URL=mysql+pymysql://user:password@127.0.0.1:3306/dublinbikes
+JCDECAUX_API_KEY=your_jcdecaux_api_key
+JCDECAUX_CONTRACT=dublin
+SCRAPE_INTERVAL_SECONDS=300
+RETRY_INTERVAL_SECONDS=60
+WEATHER_SCRAPE_INTERVAL_SECONDS=3600
+OUTPUT_JSON=stations.json
+JCDECAUX_BASE_URL=https://api.jcdecaux.com/vls/v1/stations
+OPENWEATHER_API_KEY=your_openweather_api_key
+OPENWEATHER_GEOCODING_URL=http://api.openweathermap.org/geo/1.0/direct
+OPENWEATHER_ONECALL_URL=https://api.openweathermap.org/data/3.0/onecall
+OPENWEATHER_FORECAST_URL=https://api.openweathermap.org/data/2.5/forecast
+WEATHER_CITY=Dublin,IE
+```
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | ✅ | — | MySQL connection string, e.g. `mysql+pymysql://user:password@host:3306/dublinbikes` |
+| `JCDECAUX_API_KEY` | ✅ | — | JCDecaux API key for bike station data |
+| `JCDECAUX_CONTRACT` | ✅ | `dublin` | JCDecaux contract name |
+| `OPENWEATHER_API_KEY` | | — | OpenWeatherMap API key (optional — weather scraping is skipped if unset) |
+| `SCRAPE_INTERVAL_SECONDS` | | `300` | Interval between bike station scrapes (seconds) |
+| `RETRY_INTERVAL_SECONDS` | | `60` | Wait time before retrying after a failure (seconds) |
+| `WEATHER_SCRAPE_INTERVAL_SECONDS` | | `3600` | Interval between weather scrapes (seconds) |
+| `WEATHER_CITY` | | `Dublin,IE` | Target city for weather forecasts |
+| `OUTPUT_JSON` | | `stations.json` | Output file for `fetch_stations.py` |
+
+---
