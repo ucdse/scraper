@@ -30,9 +30,9 @@
 - **🌤️ Weather Forecast Scraping**: Collects hourly weather forecasts (temperature, humidity, wind, UV index, etc.) from OpenWeatherMap every hour.
 - **🔄 Dual-Thread Architecture**: Station and weather scraping run concurrently in separate threads with independent intervals and retry logic. 🔥
 - **🐳 Docker-First Deployment**: Ships with a production-ready `Dockerfile` (Python 3.12-slim, non-root user). 🐳
-- **⚡ Auto-Retry on Failure**: Both scrapers catch errors and retry after a configurable interval — no manual intervention needed. ⚡
+- **⚡ Auto-Retry on Failure**: The station scraper catches errors and retries after `RETRY_INTERVAL_SECONDS` (default 60s). The weather scraper handles transient API errors internally and retries on the next scheduled cycle. ⚡
 - **🧹 Smart Data Cleanup**: Weather scraper automatically purges expired forecasts, keeping only the next 48 hours. 🧹
-- **🗄️ Upsert Logic**: Station data is inserted or updated intelligently; weather forecasts are upserted to avoid duplicates. 🗄️
+- **🗄️ Smart Inserts**: Station records are inserted on first encounter; availability data is updated each cycle. Weather forecasts are upserted to avoid duplicates. 🗄️
 
 ---
 
@@ -213,7 +213,7 @@ Two concurrent threads run inside `main_scraper.py`:
 - **Station thread**: Polls JCDecaux API every `SCRAPE_INTERVAL_SECONDS` (default 5 min)
 - **Weather thread**: Polls OpenWeatherMap every `WEATHER_SCRAPE_INTERVAL_SECONDS` (default 1 hour)
 
-Both threads recover automatically from errors, retrying after `RETRY_INTERVAL_SECONDS`.
+Both threads recover automatically from errors. The station thread retries after `RETRY_INTERVAL_SECONDS` (default 60s). The weather thread handles API errors internally and retries on the next hourly cycle.
 
 ---
 
