@@ -60,13 +60,13 @@ spec:
     }
 
     stages {
-        stage('1. 拉取代码') {
+        stage('1. Pull Code') {
             steps {
                 checkout scm
             }
         }
 
-        stage('2. Python 语法检查') {
+        stage('2. Python Syntax Check') {
             steps {
                 container('python') {
                     sh '''
@@ -81,7 +81,7 @@ spec:
             }
         }
 
-        stage('3. 构建并推送 Docker 镜像') {
+        stage('3. Build & Push Docker Image') {
             when {
                 not { changeRequest() }
             }
@@ -112,7 +112,7 @@ spec:
             }
         }
 
-        stage('4. 部署到 EC2') {
+        stage('4. Deploy to EC2') {
             when {
                 allOf {
                     branch 'main'
@@ -135,11 +135,11 @@ spec:
                           apk add --no-cache openssh-client bash
                         fi
 
-                        # 在 EC2 上创建 .env 所在目录（若不存在）
+                        # Create .env directory on EC2 if it doesn't exist
                         ENV_DIR=$(dirname "${CONTAINER_ENV_FILE}")
                         ssh -i "${SSH_KEY}" -o StrictHostKeyChecking=no "${SSH_USER}@${SERVER_HOST}" "mkdir -p ${ENV_DIR}"
 
-                        # 将 Jenkins 中的 .env credential 上传到 EC2 指定路径
+                        # Upload .env credential from Jenkins to the specified path on EC2
                         scp -i "${SSH_KEY}" -o StrictHostKeyChecking=no "${ENV_FILE}" "${SSH_USER}@${SERVER_HOST}:${CONTAINER_ENV_FILE}"
 
                         PASS_B64=$(printf '%s' "${DOCKER_PASS}" | base64)

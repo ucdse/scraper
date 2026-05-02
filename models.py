@@ -17,10 +17,10 @@ class Station(Base):
     address: Mapped[str] = mapped_column(String(200))
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
-    # 是否支持现场银行卡/信用卡支付 (JCDecaux API: banking)。0=不支持，1=支持
-    banking: Mapped[bool] = mapped_column(Boolean, comment="是否支持现场银行卡/信用卡支付；0=不支持，1=支持")
-    # 是否为奖励站点，如还车可获额外时长等 (JCDecaux API: bonus)。0=否，1=是
-    bonus: Mapped[bool] = mapped_column(Boolean, comment="是否为奖励站点（还车可获额外时长等）；0=否，1=是")
+    # Whether on-site card payment is supported (JCDecaux API: banking). 0=no, 1=yes
+    banking: Mapped[bool] = mapped_column(Boolean, comment="Whether on-site card payment is supported; 0=no, 1=yes")
+    # Whether this is a bonus station (e.g., returning a bike grants extra time). 0=no, 1=yes
+    bonus: Mapped[bool] = mapped_column(Boolean, comment="Whether this is a bonus station (returning a bike grants extra time); 0=no, 1=yes")
     bike_stands: Mapped[int] = mapped_column(Integer)
 
     availabilities: Mapped[list[Availability]] = relationship(
@@ -40,7 +40,7 @@ class Availability(Base):
     status: Mapped[str] = mapped_column(String(20))
     last_update: Mapped[int] = mapped_column(BigInteger)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    # 数据请求的时间（抓取该条记录时的时间）
-    requested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="数据请求的时间")
+    # Timestamp when this record was requested (scraped)
+    requested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="Timestamp when this record was requested")
 
     station: Mapped[Station] = relationship("Station", back_populates="availabilities")

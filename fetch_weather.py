@@ -13,7 +13,7 @@ class WeatherScraperError(Exception):
 
 def get_lat_lon_for_city(city: str) -> tuple[float, float]:
     """
-    通过 Geocoding API 根据城市名获取经纬度
+    Get latitude and longitude for a city via the Geocoding API.
     """
     url = OPENWEATHER_GEOCODING_URL
     params = {
@@ -36,32 +36,32 @@ def get_lat_lon_for_city(city: str) -> tuple[float, float]:
 
 def fetch_weather_and_store():
     """
-    抓取目标城市的预报天气并存储入库 (更新未来2天，即48小时)。
+    Fetch weather forecast for the target city and store it in the database (updates the next 2 days, i.e., 48 hours).
     """
     if not OPENWEATHER_API_KEY:
-        print("未配置 OPENWEATHER_API_KEY，跳过天气抓取。")
+        print("OPENWEATHER_API_KEY is not configured, skipping weather scrape.")
         return
 
     started_at = datetime.datetime.now()
-    print(f"[{started_at.strftime('%Y-%m-%d %H:%M:%S')}] 开始抓取天气 ({WEATHER_CITY})...")
+    print(f"[{started_at.strftime('%Y-%m-%d %H:%M:%S')}] Starting weather scrape ({WEATHER_CITY})...")
 
     try:
-        # 1. 动态获取城市经纬度
+        # 1. Dynamically get city latitude and longitude
         lat, lon = get_lat_lon_for_city(WEATHER_CITY)
         
-        # 2. 调用 OpenWeatherMap One Call API (如果支持 3.0) 或 free forecast API
-        # 这里尝试使用标准的 Onecall API 获取 hourly 数据
+        # 2. Call OpenWeatherMap One Call API (if subscribed to 3.0) or free forecast API
+        # Try using the standard One Call API to get hourly data
         url = OPENWEATHER_ONECALL_URL
         params = {
             "lat": lat,
             "lon": lon,
             "exclude": "current,minutely,daily,alerts",
             "appid": OPENWEATHER_API_KEY,
-            "units": "metric" # 返回摄氏度
+            "units": "metric" # Return temperature in Celsius
         }
         
         req = requests.get(url, params=params, timeout=10)
-        # 兼容性处理：如果 OneCall 3.0 未订阅（返回 401），退回使用 2.5/forecast 等 API
+        # Fallback: if OneCall 3.0 is not subscribed (returns 401), fall back to 2.5/forecast API
         if req.status_code == 401:
             url = OPENWEATHER_FORECAST_URL
             params = {
@@ -75,17 +75,17 @@ def fetch_weather_and_store():
         req.raise_for_status()
         data = req.json()
 
-        # 3. 整理需要写入数据库的小时列表
+        # 3. Organize the list of hourly data to write into the database
         forecast_list = []
         now_utc = datetime.datetime.now(datetime.timezone.utc)
         
-        # 处理 OneCall 返回的 hourly (48 小时)
+        # Process OneCall hourly data (48 hours)
         if "hourly" in data:
             for item in data["hourly"]:
                 dt = datetime.datetime.fromtimestamp(item["dt"], tz=datetime.timezone.utc)
                 weather_info = item["weather"][0] if "weather" in item and item["weather"] else {}
                 forecast_list.append({
-                    "forecast_time": dt.replace(tzinfo=None), # SQLAlchemy DateTime usually assumes naive local or UTC depending on engine
+                    "forecast_time": dt.replace(tzinfo=None), # SQLAlchemy DateTime usually assumes naive local or UTC depending on the engine
                     "temperature": item.get("temp", 0),
                     "weather_code": weather_info.get("id", 800),
                     "description": weather_info.get("description", ""),
@@ -100,7 +100,7 @@ def fetch_weather_and_store():
                     "wind_deg": item.get("wind_deg"),
                     "pop": item.get("pop"),
                 })
-        # 处理 2.5/forecast 返回的 3-hour list (通常 5天 40条记录)
+        # Process 2.5/forecast 3-hour list (usually 5 days, 40 records)
         elif "list" in data:
             for item in data["list"]:
                  dt = datetime.datetime.fromtimestamp(item["dt"], tz=datetime.timezone.utc)
@@ -114,7 +114,7 @@ def fetch_weather_and_store():
                     "feels_like": item["main"].get("feels_like"),
                     "pressure": item["main"].get("pressure"),
                     "humidity": item["main"].get("humidity"),
-                    "uvi": None, # Forecast API rarely provides UVI
+                    "uvi": None, # Forecast API rarely provides UV index
                     "clouds": item.get("clouds", {}).get("all"),
                     "visibility": item.get("visibility"),
                     "wind_speed": item.get("wind", {}).get("speed"),
@@ -123,14 +123,14 @@ def fetch_weather_and_store():
                 })
         
         if not forecast_list:
-            print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 天气 API 没有返回小时数据。")
+            print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weather API returned no hourly data.")
             return
 
-        # 4. Upsert 逻辑 + 删除旧数据
+        # 4. Upsert logic + delete old data
         session = SessionLocal()
         try:
-            # 清理过期的预报（小于当前 UTC 小时）
-            # 当前时间的整点
+            # Clean up expired forecasts (earlier than current UTC hour)
+            # The current hour on the dot
             current_hour = now_utc.replace(minute=0, second=0, microsecond=0, tzinfo=None)
             session.execute(delete(WeatherForecast).where(WeatherForecast.forecast_time < current_hour))
             
@@ -138,7 +138,7 @@ def fetch_weather_and_store():
             updated = 0
             
             for item in forecast_list:
-                # 只保留未来最多 48 小时的数据。
+                # Only keep data for the next 48 hours max.
                 if (item["forecast_time"] - current_hour).total_seconds() > 48 * 3600:
                     continue
                     
@@ -187,9 +187,9 @@ def fetch_weather_and_store():
             finished_at = datetime.datetime.now()
             duration_sec = (finished_at - started_at).total_seconds()
             print(
-                f"[{finished_at.strftime('%Y-%m-%d %H:%M:%S')}] 天气抓取完成 | "
+                f"[{finished_at.strftime('%Y-%m-%d %H:%M:%S')}] Weather scrape done | "
                 f"Insert: {inserted}, Update: {updated} | "
-                f"耗时 {duration_sec:.2f} 秒"
+                f"Elapsed: {duration_sec:.2f}s"
             )
 
         except Exception as e:
@@ -199,7 +199,7 @@ def fetch_weather_and_store():
             session.close()
 
     except Exception as e:
-        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 抓取天气报错了: {e}")
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weather scrape error: {e}")
 
 if __name__ == "__main__":
     fetch_weather_and_store()

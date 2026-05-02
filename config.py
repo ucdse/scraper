@@ -1,5 +1,5 @@
 """
-独立 scraper 配置：只依赖环境变量，不依赖 Flask 项目。
+Standalone scraper config: only depends on environment variables, no Flask dependency.
 """
 
 import os
@@ -19,7 +19,7 @@ OUTPUT_JSON = os.environ.get("OUTPUT_JSON", "stations.json")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL 环境变量未设置，请在 .env 文件中配置")
+    raise ValueError("DATABASE_URL environment variable is not set. Please configure it in the .env file.")
 
 SCRAPE_INTERVAL_SECONDS = int(os.environ.get("SCRAPE_INTERVAL_SECONDS", "300"))
 RETRY_INTERVAL_SECONDS = int(os.environ.get("RETRY_INTERVAL_SECONDS", "60"))
