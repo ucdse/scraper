@@ -11,7 +11,7 @@ from models import Availability, Station
 
 def scrape_stations():
     """
-    抓取站点数据。期望 API 返回格式与样例一致，例如：
+    Scrape station data. Expects the API response format to match the example, e.g.:
     {
       "number": 42,
       "contract_name": "dublin",
@@ -28,10 +28,10 @@ def scrape_stations():
     }
     """
     started_at = datetime.datetime.now()
-    print(f"[{started_at.strftime('%Y-%m-%d %H:%M:%S')}] 开始抓取...")
+    print(f"[{started_at.strftime('%Y-%m-%d %H:%M:%S')}] Starting scrape...")
 
     raw = fetch_stations()
-    # 兼容：直接返回数组，或包在 {"stations": [...]} 等键里
+    # Compatibility: return list directly, or wrapped in {"stations": [...]} etc.
     if isinstance(raw, list):
         data = raw
     elif isinstance(raw, dict):
@@ -44,7 +44,7 @@ def scrape_stations():
     try:
         new_stations = 0
         for item in data:
-            # --- 第一步：处理 Station (静态数据) ---
+            # --- Step 1: Process Station (static data) ---
             station = session.get(Station, item["number"])
 
             if not station:
@@ -62,7 +62,7 @@ def scrape_stations():
                 )
                 session.add(station)
 
-            # --- 第二步：处理 Availability (动态数据) ---
+            # --- Step 2: Process Availability (dynamic data) ---
             dt_object = datetime.datetime.fromtimestamp(item["last_update"] / 1000.0)
             availability = Availability(
                 number=item["number"],
@@ -85,9 +85,9 @@ def scrape_stations():
     finished_at = datetime.datetime.now()
     duration_sec = (finished_at - started_at).total_seconds()
     print(
-        f"[{finished_at.strftime('%Y-%m-%d %H:%M:%S')}] 完成 | "
-        f"本次获得 {total} 条站点数据，新增站点 {new_stations} 条，写入 {total} 条可用性记录 | "
-        f"耗时 {duration_sec:.2f} 秒"
+        f"[{finished_at.strftime('%Y-%m-%d %H:%M:%S')}] Done | "
+        f"Fetched {total} station records, {new_stations} new stations, wrote {total} availability records | "
+        f"Elapsed: {duration_sec:.2f}s"
     )
 
 
@@ -95,7 +95,7 @@ import threading
 
 def weather_worker():
     """
-    独立线程运行天气抓取，按照固定的频率 (1小时)
+    Runs weather scraping in an independent thread at a fixed interval (1 hour).
     """
     while True:
         try:
@@ -103,21 +103,21 @@ def weather_worker():
             time.sleep(WEATHER_SCRAPE_INTERVAL_SECONDS)
         except Exception as e:
             ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[{ts}] 天气线程报错了: {e}")
+            print(f"[{ts}] Weather thread error: {e}")
             time.sleep(RETRY_INTERVAL_SECONDS)
 
-# 主循环（表结构由 flask-app 的迁移维护，请先执行 flask db upgrade）
+# Main loop (table schema is maintained by flask-app migrations; run `flask db upgrade` first)
 if __name__ == "__main__":
-    # 启动天气抓取线程
+    # Start weather scraping thread
     t_weather = threading.Thread(target=weather_worker, daemon=True)
     t_weather.start()
 
     while True:
         try:
             scrape_stations()
-            # 默认休息 5 分钟，可通过 .env 覆盖
+            # Default rest interval is 5 minutes, can be overridden via .env
             time.sleep(SCRAPE_INTERVAL_SECONDS)
         except Exception as e:
             ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[{ts}] 站点报错了: {e}")
+            print(f"[{ts}] Station scrape error: {e}")
             time.sleep(RETRY_INTERVAL_SECONDS)
