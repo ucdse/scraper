@@ -43,7 +43,7 @@ def fetch_weather_and_store():
         return
 
     started_at = datetime.datetime.now()
-        print(f"[{started_at.strftime('%Y-%m-%d %H:%M:%S')}] Starting weather scrape ({WEATHER_CITY})...")
+    print(f"[{started_at.strftime('%Y-%m-%d %H:%M:%S')}] Starting weather scrape ({WEATHER_CITY})...")
 
     try:
         # 1. Dynamically get city latitude and longitude
